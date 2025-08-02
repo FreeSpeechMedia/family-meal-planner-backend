@@ -47,10 +47,6 @@ app.post('/api/add-recipe', checkToken, async (req, res) => {
       ? ingredientsList.join('\n')
       : ingredientsList || '';
 
-    const prepText = Array.isArray(prep)
-      ? prep.join('\n')
-      : prep || '';
-
     const instructionsText = Array.isArray(instructions)
       ? instructions.join('\n')
       : instructions || '';
