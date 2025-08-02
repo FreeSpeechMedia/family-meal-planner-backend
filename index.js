@@ -116,6 +116,28 @@ app.post('/api/add-mealplan', checkToken, async (req, res) => {
     res.status(400).json({ error: err.message });
   }
 });
+app.get('/api/recipes', checkToken, async (req, res) => {
+  try {
+    const result = await axios.get(
+      `${AIRTABLE_URL}/Recipes?maxRecords=100`,
+      { headers: AIRTABLE_HEADERS }
+    );
+    res.json(result.data.records);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+app.get('/api/mealplans', checkToken, async (req, res) => {
+  try {
+    const result = await axios.get(
+      `${AIRTABLE_URL}/Meal%20Plan?maxRecords=100`,
+      { headers: AIRTABLE_HEADERS }
+    );
+    res.json(result.data.records);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
 
 
 app.get('/', (req, res) => {
