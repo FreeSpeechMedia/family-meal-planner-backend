@@ -86,6 +86,17 @@ app.post('/api/add-recipe', checkToken, async (req, res) => {
     }
   }
 });
+app.get('/api/recipes-sample', checkToken, async (req, res) => {
+  try {
+    const result = await axios.get(
+      `${AIRTABLE_URL}/Recipes?maxRecords=1`,
+      { headers: AIRTABLE_HEADERS }
+    );
+    res.json(result.data.records[0]);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
 
 // Add Meal Plan
 app.post('/api/add-mealplan', checkToken, async (req, res) => {
