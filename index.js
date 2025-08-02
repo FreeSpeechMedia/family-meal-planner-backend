@@ -116,17 +116,34 @@ app.post('/api/add-mealplan', checkToken, async (req, res) => {
     res.status(400).json({ error: err.message });
   }
 });
-app.get('/api/recipes', checkToken, async (req, res) => {
+app.get('/api/recipes-min', checkToken, async (req, res) => {
   try {
     const result = await axios.get(
-      `${AIRTABLE_URL}/Recipes?maxRecords=100`,
+      `${AIRTABLE_URL}/Recipes?maxRecords=20&fields[]=Name`,
       { headers: AIRTABLE_HEADERS }
     );
-    res.json(result.data.records);
+    // Return only record ID and Name (or just ID)
+    const records = result.data.records.map(rec => ({
+      id: rec.id,
+      name: rec.fields.Name
+    }));
+    res.json(records);
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
 });
+app.get('/api/recipes/:id', checkToken, async (req, res) => {
+  try {
+    const result = await axios.get(
+      `${AIRTABLE_URL}/Recipes/${req.params.id}`,
+      { headers: AIRTABLE_HEADERS }
+    );
+    res.json(result.data);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 app.get('/api/mealplans', checkToken, async (req, res) => {
   try {
     const result = await axios.get(
