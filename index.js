@@ -24,27 +24,66 @@ function checkToken(req, res, next) {
 // Add Recipe
 app.post('/api/add-recipe', checkToken, async (req, res) => {
   try {
-    const { name, photo, category, cookTime, prepTime, totalTime, ingredientsList, instructions, tags } = req.body;
+    const {
+      name,
+      photo,
+      category,
+      prepTime,
+      cookTime,
+      totalTime,
+      ingredientsList,
+      prep,
+      instructions,
+      tags
+    } = req.body;
+
+    // Handle photo field for Airtable attachment
+    let photoArray = [];
+    if (photo && typeof photo === "string" && photo.startsWith("http")) {
+      photoArray = [{ url: photo }];
+    }
+
+    // Join arrays into newlines for text fields
+    const ingredientsText = Array.isArray(ingredientsList)
+      ? ingredientsList.join('\n')
+      : ingredientsList || '';
+
+    const prepText = Array.isArray(prep)
+      ? prep.join('\n')
+      : prep || '';
+
+    const instructionsText = Array.isArray(instructions)
+      ? instructions.join('\n')
+      : instructions || '';
+
+    // Only send fields with values
+    const fields = {
+      Name: name,
+      Category: category,
+      "Prep Time": prepTime,
+      "Cook Time": cookTime,
+      "Total Time": totalTime,
+      "Ingredient List": ingredientsText,
+      Prep: prepText,
+      Instructions: instructionsText,
+    };
+
+    if (photoArray.length > 0) fields.Photo = photoArray;
+    if (Array.isArray(tags) && tags.length > 0) fields.Tags = tags;
+
     const result = await axios.post(
       `${AIRTABLE_URL}/Recipes`,
-      {
-        fields: {
-          Name: name,
-          Photo: photo,
-          Category: category,
-          'Cook Time': cookTime,
-          'Prep Time': prepTime,
-          'Total Time': totalTime,
-          'Ingredients List': ingredientsList,
-          Instructions: instructions,
-          Tags: tags,
-        },
-      },
+      { fields },
       { headers: AIRTABLE_HEADERS }
     );
     res.json({ success: true, airtableId: result.data.id });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    // Pass through Airtable's error for easier debugging
+    if (err.response && err.response.data) {
+      res.status(400).json({ error: err.response.data });
+    } else {
+      res.status(400).json({ error: err.message });
+    }
   }
 });
 
