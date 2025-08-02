@@ -96,17 +96,19 @@ app.get('/api/recipes-sample', checkToken, async (req, res) => {
 app.post('/api/add-mealplan', checkToken, async (req, res) => {
   try {
     const { name, date, meal, recipe, rating } = req.body;
+
+    // Build the fields object
+    const fields = {
+      Name: name,
+      Date: date,
+      Recipe: [recipe], // needs to be an array of record IDs
+    };
+    if (rating) fields.Ratings = rating;
+    if (meal) fields.Meal = meal; // <-- single string, e.g. "Dinner"
+
     const result = await axios.post(
       `${AIRTABLE_URL}/Meal%20Plan`,
-      {
-        fields: {
-          Name: name,
-          Date: date,
-          Meal: meal
-          Recipe: [recipe], // needs to be an array of record IDs
-          Ratings: rating,
-        },
-      },
+      { fields },
       { headers: AIRTABLE_HEADERS }
     );
     res.json({ success: true, airtableId: result.data.id });
@@ -114,6 +116,7 @@ app.post('/api/add-mealplan', checkToken, async (req, res) => {
     res.status(400).json({ error: err.message });
   }
 });
+
 
 app.get('/', (req, res) => {
   res.send('Fite Family Food Planner backend is running!');
