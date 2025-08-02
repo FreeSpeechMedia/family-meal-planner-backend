@@ -95,13 +95,14 @@ app.get('/api/recipes-sample', checkToken, async (req, res) => {
 // Add Meal Plan
 app.post('/api/add-mealplan', checkToken, async (req, res) => {
   try {
-    const { name, date, recipe, rating } = req.body;
+    const { name, date, meal, recipe, rating } = req.body;
     const result = await axios.post(
       `${AIRTABLE_URL}/Meal%20Plan`,
       {
         fields: {
           Name: name,
           Date: date,
+          Meal: meal
           Recipe: [recipe], // needs to be an array of record IDs
           Ratings: rating,
         },
