@@ -32,7 +32,6 @@ app.post('/api/add-recipe', checkToken, async (req, res) => {
       cookTime,
       totalTime,
       ingredientsList,
-      prep,
       instructions,
       tags
     } = req.body;
