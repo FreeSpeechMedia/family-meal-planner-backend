@@ -33,7 +33,8 @@ app.post('/api/add-recipe', checkToken, async (req, res) => {
       totalTime,
       ingredientsList,
       instructions,
-      tags
+      tags,
+      notes
     } = req.body;
 
     // Handle photo field for Airtable attachment
@@ -41,7 +42,7 @@ app.post('/api/add-recipe', checkToken, async (req, res) => {
     if (photo && typeof photo === "string" && photo.startsWith("http")) {
       photoArray = [{ url: photo }];
     }
-
+    if (notes) fields.Notes = notes;
     // Join arrays into newlines for text fields
     const ingredientsText = Array.isArray(ingredientsList)
       ? ingredientsList.join('\n')
