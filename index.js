@@ -105,34 +105,26 @@ app.post('/api/add-mealplan', checkToken, async (req, res) => {
       return res.status(400).json({ error: "Missing required fields: name, date, recipe" });
     }
 
-   // Normalize date → strict ISO 8601 datetime (UTC)
-    let isoDateTime;
-    try {
-      const d = new Date(date);
-      if (isNaN(d)) {
-        return res.status(400).json({ error: "Invalid date; provide ISO 8601 datetime like 2025-08-14T00:00:00.000Z" });
-      }
-      isoDateTime = d.toISOString(); // Always outputs full ISO datetime in UTC
-    } catch (e) {
-      return res.status(400).json({ error: e.message });
+    // Strict ISO 8601 datetime
+    const d = new Date(date);
+    if (isNaN(d)) {
+      return res.status(400).json({ error: "Invalid date; provide ISO 8601 datetime like 2025-08-14T00:00:00.000Z" });
     }
-
+    const isoDateTime = d.toISOString();
 
     // Linked Recipe(s)
-    const recipeIds  = Array.isArray(recipe) ? recipe : [recipe];
+    const recipeIds = Array.isArray(recipe) ? recipe : [recipe];
     const recipeLinks = recipeIds.map(id => ({ id: String(id) }));
 
     const fields = {
-      // Prefer field IDs if you have them
       Name: name,
-      Date: iso,
+      Date: isoDateTime,
       Recipe: recipeLinks
     };
 
     const payload = { records: [{ fields }], typecast: true };
 
-    // Prefer table ID (tbl...) instead of name for resilience
-    const url = `${AIRTABLE_URL}/Meal%20Plan`;
+    const url = `${AIRTABLE_URL}/Meal%20Plan`; // ideally use table ID
     const r = await axios.post(url, payload, { headers: AIRTABLE_HEADERS });
 
     const recs = r?.data?.records;
@@ -151,7 +143,6 @@ app.post('/api/add-mealplan', checkToken, async (req, res) => {
   }
 });
 
-
 app.get('/api/recipes-min', checkToken, async (req, res) => {
   try {
     const result = await axios.get(
@@ -168,6 +159,7 @@ app.get('/api/recipes-min', checkToken, async (req, res) => {
     res.status(400).json({ error: err.message });
   }
 });
+
 app.get('/api/recipes/:id', checkToken, async (req, res) => {
   try {
     const result = await axios.get(
