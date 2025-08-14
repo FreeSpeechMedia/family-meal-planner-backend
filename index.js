@@ -96,7 +96,27 @@ app.get('/api/recipes-sample', checkToken, async (req, res) => {
     res.status(400).json({ error: err.message });
   }
 });
+function toLocalOffsetIsoMidnight(dateLike) {
+  // Expect "YYYY-MM-DD" ideally; otherwise parse and use that day in local server TZ
+  const base = new Date(dateLike);
+  if (isNaN(base)) throw new Error("Invalid date; use YYYY-MM-DD or ISO 8601");
 
+  // Construct midnight *local* (server local). If your server isn't in Chicago,
+  // prefer sending "YYYY-MM-DDT00:00:00-05:00" from the GPT instead.
+  const local = new Date(base.getFullYear(), base.getMonth(), base.getDate(), 0, 0, 0, 0);
+
+  const offMin = local.getTimezoneOffset();  // minutes difference to UTC (e.g., 300 in CDT)
+  const sign = offMin <= 0 ? "+" : "-";
+  const abs = Math.abs(offMin);
+  const hh = String(Math.floor(abs / 60)).padStart(2, "0");
+  const mm = String(abs % 60).padStart(2, "0");
+
+  const yyyy = local.getFullYear();
+  const MM = String(local.getMonth() + 1).padStart(2, "0");
+  const dd = String(local.getDate()).padStart(2, "0");
+
+  return `${yyyy}-${MM}-${dd}T00:00:00${sign}${hh}:${mm}`;
+}
 // Add Meal Plan (hardened)
 app.post('/api/add-mealplan', checkToken, async (req, res) => {
   try {
@@ -106,11 +126,12 @@ app.post('/api/add-mealplan', checkToken, async (req, res) => {
     }
 
     // Strict ISO 8601 datetime
-    const d = new Date(date);
-    if (isNaN(d)) {
-      return res.status(400).json({ error: "Invalid date; provide ISO 8601 datetime like 2025-08-14T00:00:00.000Z" });
+     let isoDateTime;
+    try {
+      isoDateTime = toLocalOffsetIsoMidnight(date);
+    } catch (e) {
+      return res.status(400).json({ error: e.message });
     }
-    const isoDateTime = d.toISOString();
 
     // Linked Recipe(s)
     const recipeIds = Array.isArray(recipe) ? recipe : [recipe];
@@ -119,7 +140,7 @@ app.post('/api/add-mealplan', checkToken, async (req, res) => {
     const fields = {
       Name: name,
       Date: isoDateTime,
-      Recipe: recipeLinks
+      fldDiP26FnhcK3Sfw: recipeLinks
     };
 
     const payload = { records: [{ fields }], typecast: true };
@@ -131,7 +152,24 @@ app.post('/api/add-mealplan', checkToken, async (req, res) => {
     if (!Array.isArray(recs) || !recs.length) {
       return res.status(502).json({ error: "Airtable returned no records", raw: r.data });
     }
-    return res.status(201).json({ created: true, records: recs.map(x => ({ id: x.id })) });
+    // After create:
+const createdId = r.data.records[0].id;
+
+// Verify the link landed
+const verify = await axios.get(`${AIRTABLE_URL}/Meal%20Plan/${createdId}?returnFieldsByFieldId=true`,
+                               { headers: AIRTABLE_HEADERS });
+const linked = verify.data.fields?.fldRECIPE || [];
+if (!linked.length) {
+  return res.status(502).json({
+    error: "LinkMissing",
+    message: "Recipe link did not attach",
+    createdId,
+    airtable: verify.data
+  });
+}
+
+return res.status(201).json({ created: true, id: createdId });
+
 
   } catch (err) {
     const status = err?.response?.status || 500;
