@@ -158,7 +158,7 @@ const createdId = r.data.records[0].id;
 // Verify the link landed
 const verify = await axios.get(`${AIRTABLE_URL}/Meal%20Plan/${createdId}?returnFieldsByFieldId=true`,
                                { headers: AIRTABLE_HEADERS });
-const linked = verify.data.fields?.fldRECIPE || [];
+const linked = verify.data.fields?.fldDiP26FnhcK3Sfw || [];
 if (!linked.length) {
   return res.status(502).json({
     error: "LinkMissing",
