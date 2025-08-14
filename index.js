@@ -96,7 +96,7 @@ app.get('/api/recipes-sample', checkToken, async (req, res) => {
 // Add Meal Plan
 app.post('/api/add-mealplan', checkToken, async (req, res) => {
   try {
-    const { name, date, meal, recipe, rating } = req.body;
+    const { name, date, recipe, } = req.body;
 
     // Build the fields object
     const fields = {
@@ -104,8 +104,6 @@ app.post('/api/add-mealplan', checkToken, async (req, res) => {
       Date: date,
       Recipe: [recipe], // needs to be an array of record IDs
     };
-    if (rating) fields.Ratings = rating;
-    if (meal) fields.Meal = meal; // <-- single string, e.g. "Dinner"
 
     const result = await axios.post(
       `${AIRTABLE_URL}/Meal%20Plan`,
