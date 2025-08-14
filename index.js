@@ -105,10 +105,18 @@ app.post('/api/add-mealplan', checkToken, async (req, res) => {
       return res.status(400).json({ error: "Missing required fields: name, date, recipe" });
     }
 
-    // Date (robust)
-    let iso;
-    try { iso = toIsoDate(date); }
-    catch (e) { return res.status(400).json({ error: e.message }); }
+   // Normalize date → strict ISO 8601 datetime (UTC)
+    let isoDateTime;
+    try {
+      const d = new Date(date);
+      if (isNaN(d)) {
+        return res.status(400).json({ error: "Invalid date; provide ISO 8601 datetime like 2025-08-14T00:00:00.000Z" });
+      }
+      isoDateTime = d.toISOString(); // Always outputs full ISO datetime in UTC
+    } catch (e) {
+      return res.status(400).json({ error: e.message });
+    }
+
 
     // Linked Recipe(s)
     const recipeIds  = Array.isArray(recipe) ? recipe : [recipe];
