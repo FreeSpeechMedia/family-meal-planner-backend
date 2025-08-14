@@ -4,6 +4,10 @@ require('dotenv').config();
 
 const app = express();
 app.use(express.json());
+// 1) Simple health endpoint (no auth)
+app.get('/api/health', (req, res) => {
+  res.json({ ok: true, ts: Date.now() });
+});
 
 const PORT = process.env.PORT || 3000;
 const AIRTABLE_URL = `https://api.airtable.com/v0/${process.env.AIRTABLE_BASE_ID}`;
