@@ -93,28 +93,70 @@ app.get('/api/recipes-sample', checkToken, async (req, res) => {
   }
 });
 
-// Add Meal Plan
+// Add Meal Plan (hardened)
 app.post('/api/add-mealplan', checkToken, async (req, res) => {
   try {
-    const { name, date, recipe, } = req.body;
+    let { name, date, recipe } = req.body;
 
-    // Build the fields object
+    // Basic input validation
+    if (!name || !date || !recipe) {
+      return res.status(400).json({ error: "Missing required fields: name, date, recipe" });
+    }
+
+    // Normalize date → ISO yyyy-mm-dd (adjust to your needs/timezone)
+    const isoDate = new Date(date);
+    if (isNaN(isoDate.getTime())) {
+      return res.status(400).json({ error: "Invalid date; provide ISO date like 2025-08-13" });
+    }
+    const isoDateStr = isoDate.toISOString().slice(0, 10);
+
+    // Recipe must be a linked record array of objects with {id}
+    // Accept a string id or an array of ids
+    const recipeIds = Array.isArray(recipe) ? recipe : [recipe];
+    const recipeLinks = recipeIds.map(id => ({ id: String(id) }));
+
     const fields = {
+      // Prefer field IDs if you have them: e.g. fldXXXXXXXX: name
       Name: name,
-      Date: date,
-      Recipe: [recipe], // needs to be an array of record IDs
+      Date: isoDateStr,
+      Recipe: recipeLinks,
     };
 
-    const result = await axios.post(
-      `${AIRTABLE_URL}/Meal%20Plan`,
-      { fields },
-      { headers: AIRTABLE_HEADERS }
-    );
-    res.json({ success: true, airtableId: result.data.id });
+    const payload = {
+      records: [{ fields }],
+      // Helpful when writing to selects/links; can be omitted if you prefer strict mode
+      typecast: true
+    };
+
+    // Prefer a TABLE ID here instead of "Meal%20Plan"
+    const url = `${AIRTABLE_URL}/Meal%20Plan`;
+
+    const result = await axios.post(url, payload, { headers: AIRTABLE_HEADERS });
+
+    // Expect records array back
+    const recs = result?.data?.records;
+    if (!Array.isArray(recs) || recs.length === 0) {
+      // Defensive: treat as failure if no IDs returned
+      return res.status(502).json({ error: "Airtable returned no records; unexpected response", raw: result.data });
+    }
+
+    return res.status(201).json({
+      created: true,
+      records: recs.map(r => ({ id: r.id })),
+    });
+
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    // Surface Airtable details
+    const status = err?.response?.status || 500;
+    const body = err?.response?.data || { message: err.message };
+    return res.status(status).json({
+      error: "Airtable create failed",
+      status,
+      airtable: body
+    });
   }
 });
+
 app.get('/api/recipes-min', checkToken, async (req, res) => {
   try {
     const result = await axios.get(
